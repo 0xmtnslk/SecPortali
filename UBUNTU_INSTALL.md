@@ -1,6 +1,6 @@
-# 🚀 SecPortali - Ubuntu 22.04 Kurulum Rehberi
+# 🚀 SecPortali - Ubuntu 22.04 Nihai Kurulum Rehberi
 
-Bu rehber, projenizi sıfır bir Ubuntu 22.04 sunucusunda, Docker ve Nginx kullanarak yayına almanız için gereken tüm adımları içerecek şekilde, "hiç bilmeyen birine" göre hazırlanmıştır.
+Bu rehber, projenizi sıfır bir Ubuntu 22.04 sunucusunda, Docker ve Nginx kullanarak yayına almanız için gereken tüm adımları, karşılaşılabilecek hatalar giderilmiş şekilde içerir.
 
 ## 📋 Gereksinimler
 - Temiz bir Ubuntu 22.04 Sunucusu (Root erişimi olan)
@@ -14,7 +14,7 @@ Bu rehber, projenizi sıfır bir Ubuntu 22.04 sunucusunda, Docker ve Nginx kulla
 
 Mevcut projenizi kendi GitHub hesabınızda **SecPortali** ismiyle yeni bir repo olarak açmak için terminalde (proje klasörünüzde) şu komutları çalıştırın:
 
-1.  **Mevcut git geçmişini temizleyip yeniden başlatmak isterseniz (Opsiyonel):**
+1.  **Mevcut git geçmişini temizleyip yeniden başlatın:**
     ```bash
     rm -rf .git
     git init
@@ -27,7 +27,6 @@ Mevcut projenizi kendi GitHub hesabınızda **SecPortali** ismiyle yeni bir repo
     ```
 
 3.  **GitHub'da "SecPortali" isminde boş bir repo oluşturun ve şu komutlarla bağlayın:**
-    *(Kullanıcı adınızı ve repo linkinizi kendinize göre güncelleyin)*
     ```bash
     git branch -M main
     git remote add origin https://github.com/KULLANICI_ADINIZ/SecPortali.git
@@ -43,61 +42,64 @@ Sunucunuza SSH üzerinden bağlanın:
 ssh root@SUNUCU_IP_ADRESINIZ
 ```
 
-Sistemi güncelleyin:
+**Temel araçları ve sistemi güncelleyin:**
+*(Nano ve Git gibi araçların eksik olmaması için)*
 ```bash
 apt update && apt upgrade -y
+apt install nano git curl apt-transport-https ca-certificates software-properties-common -y
 ```
 
 ---
 
 ## 3. Adım: Docker ve Docker Compose Kurulumu
 
-Aşağıdaki komutları sırasıyla kopyalayıp sunucunuza yapıştırın:
-
 1.  **Docker kurulumu:**
     ```bash
-    apt install apt-transport-https ca-certificates curl software-properties-common -y
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     apt update
     apt install docker-ce -y
     ```
 
-2.  **Docker Compose kurulumu:**
+2.  **Docker Compose kurulumu (V2):**
     ```bash
     mkdir -p ~/.docker/cli-plugins/
     curl -SL https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
     chmod +x ~/.docker/cli-plugins/docker-compose
-    # Test etmek için:
-    docker compose version
+    # Doğrulamak için: docker compose version
     ```
 
 ---
 
 ## 4. Adım: Projeyi Sunucuya İndirme ve Çalıştırma
 
-1.  **Projeyi GitHub'dan çekin:**
+1.  **Klasör oluşturun ve projeyi çekin:**
     ```bash
+    mkdir -p /var/www
     cd /var/www
     git clone https://github.com/KULLANICI_ADINIZ/SecPortali.git
     cd SecPortali
     ```
 
-2.  **Ortam değişkenlerini (.env) ayarlayın:**
-    *(Klasör içindeki .env dosyalarını oluşturun veya düzenleyin)*
+2.  **JWT Secret ve .env Dosyası Kurulumu:**
+    Önce güvenli bir şifre üretin ve kopyalayın:
+    ```bash
+    openssl rand -base64 32
+    ```
+    Şimdi `.env` dosyasını oluşturun:
     ```bash
     nano .env
     ```
-    İçine şunları yazın (Backend için):
+    İçine şunları yapıştırın (Şifreyi ve DB ayarlarını güncelleyin):
     ```env
     NODE_ENV=production
     PORT=3001
     DB_HOST=postgres
     DB_PORT=5432
     DB_USER=asset_admin
-    DB_PASSWORD=asset_password_DEGIS_LUTFEN
+    DB_PASSWORD=GÜÇLÜ_BİR_ŞİFRE_YAZIN
     DB_NAME=sec_portali_db
-    JWT_SECRET=CokGizliBirSifreGirin
+    JWT_SECRET=AZ_ÖNCE_ÜRETTİĞİNİZ_ŞİFREYİ_BURAYA_YAPIŞTIRIN
     ```
 
 3.  **Docker Compose ile ayağa kaldırın:**
@@ -114,19 +116,20 @@ Aşağıdaki komutları sırasıyla kopyalayıp sunucunuza yapıştırın:
     apt install nginx -y
     ```
 
-2.  **Yeni bir Nginx ayar dosyası oluşturun:**
+2.  **Ayar dosyasını oluşturun:**
     ```bash
     nano /etc/nginx/sites-available/sec-portali.medicalisg.com
     ```
 
-3.  **Aşağıdaki konfigürasyonu yapıştırın:**
+3.  **Konfigürasyonu yapıştırın:**
+    *(Bağlantı hatalarını önlemek için 127.0.0.1 kullanılmıştır)*
     ```nginx
     server {
         listen 80;
         server_name sec-portali.medicalisg.com;
 
         location / {
-            proxy_pass http://localhost:3000; # Frontend portu
+            proxy_pass http://127.0.0.1:3000;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection 'upgrade';
@@ -135,7 +138,7 @@ Aşağıdaki komutları sırasıyla kopyalayıp sunucunuza yapıştırın:
         }
 
         location /api {
-            proxy_pass http://localhost:3001; # Backend portu
+            proxy_pass http://127.0.0.1:3001;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection 'upgrade';
@@ -156,19 +159,16 @@ Aşağıdaki komutları sırasıyla kopyalayıp sunucunuza yapıştırın:
 
 ## 6. Adım: SSL (HTTPS) Kurulumu (Certbot)
 
-Güvenli (🔒) bağlantı için Certbot kullanarak bedava SSL sertifikası alalım:
-
 ```bash
 apt install certbot python3-certbot-nginx -y
 certbot --nginx -d sec-portali.medicalisg.com
 ```
-*(Certbot size email soracaktır, girin ve yönlendirmeleri (1 veya 2 seçeneği gelirse Redirect olanı seçin) onaylayın.)*
 
 ---
 
-## ✅ Artık Hazırsınız!
-Şu andan itibaren projenize `https://sec-portali.medicalisg.com` adresi üzerinden erişebilirsiniz.
+## ✅ Tamamlandı!
+Uygulamanız artık `https://sec-portali.medicalisg.com` üzerinden yayında.
 
-### Küçük İpuçları:
-- **Hataları izlemek için:** `docker compose logs -f`
-- **Yeniden başlatmak için:** `docker compose restart`
+### İpuçları:
+- **Değişiklikleri çekmek:** `git pull && docker compose -f docker-compose.prod.yml up -d --build`
+- **Logları izlemek:** `docker compose -f docker-compose.prod.yml logs -f`
