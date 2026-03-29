@@ -1,0 +1,71 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: sec_portali_db_prod
+    environment:
+      POSTGRES_USER: ${DB_USER:-asset_admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-asset_password}
+      POSTGRES_DB: ${DB_NAME:-sec_portali_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - sec_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-asset_admin} -d ${DB_NAME:-sec_portali_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sec_portali_backend_prod
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-asset_admin}
+      DB_PASSWORD: ${DB_PASSWORD:-asset_password}
+      DB_NAME: ${DB_NAME:-sec_portali_db}
+      JWT_SECRET: ${JWT_SECRET:-your_fallback_secret}
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend/uploads:/app/uploads
+    networks:
+      - sec_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: npm start
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sec_portali_frontend_prod
+    environment:
+      VITE_API_URL: http://sec-portali.medicalisg.com/api
+      VITE_APP_NAME: SecPortali
+    ports:
+      - "3000:3000"
+    networks:
+      - sec_network
+    depends_on:
+      - backend
+    command: sh -c "npm run build && npm run preview -- --port 3000 --host"
+    restart: always
+
+volumes:
+  postgres_prod_data:
+
+networks:
+  sec_network:
+    driver: bridge

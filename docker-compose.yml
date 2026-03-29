@@ -1,0 +1,74 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: asset_management_db
+    environment:
+      POSTGRES_USER: asset_admin
+      POSTGRES_PASSWORD: asset_password
+      POSTGRES_DB: asset_management
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - asset_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U asset_admin -d asset_management"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: asset_management_backend
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: asset_admin
+      DB_PASSWORD: asset_password
+      DB_NAME: asset_management
+      JWT_SECRET: your_jwt_secret_key_change_in_production
+      ORACLE_API_URL: http://oracle-system:8080/api
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/uploads:/app/uploads
+      - ./database/init:/app/database/init
+    networks:
+      - asset_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: npm run dev
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: asset_management_frontend
+    environment:
+      VITE_API_URL: http://backend:3001/api
+      VITE_APP_NAME: Asset Management System
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    networks:
+      - asset_network
+    depends_on:
+      - backend
+    command: npm run dev
+
+volumes:
+  postgres_data:
+
+networks:
+  asset_network:
+    driver: bridge
