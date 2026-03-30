@@ -61,7 +61,7 @@ services:
       - sec_network
     depends_on:
       - backend
-    command: sh -c "npm run build && npm run preview"
+    command: sh -c "npm run build && npm run preview -- --port 3000 --host 0.0.0.0"
     restart: always
 
 volumes:
