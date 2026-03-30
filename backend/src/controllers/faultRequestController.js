@@ -427,30 +427,30 @@ const getFaultRequestStatistics = async (req, res) => {
     // Scoping
     const userRoles = req.user.roles || [];
     const isAdmin = userRoles.includes('Admin') || userRoles.includes('Sistem Yöneticisi') || userRoles.includes('Central Manager');
-    const facilityCondition = isAdmin ? '' : `AND facility_id = '${req.user.facilities?.[0] || '00000000-0000-0000-0000-000000000000'}'`;
-    const userCondition = (isAdmin || userRoles.includes('Manager') || userRoles.includes('Tesis Yöneticisi') || userRoles.includes('Technician') || userRoles.includes('Teknisyen')) ? '' : `AND requested_by = '${req.user.id}'`;
+    const facilityCondition = isAdmin ? '' : `AND fr.facility_id = '${req.user.facilities?.[0] || '00000000-0000-0000-0000-000000000000'}'`;
+    const userCondition = (isAdmin || userRoles.includes('Manager') || userRoles.includes('Tesis Yöneticisi') || userRoles.includes('Technician') || userRoles.includes('Teknisyen')) ? '' : `AND fr.requested_by = '${req.user.id}'`;
 
     const baseWhere = `
-      INNER JOIN core_facilities f ON eams_fault_requests.facility_id = f.id 
+      INNER JOIN core_facilities f ON fr.facility_id = f.id 
       WHERE f.is_active = true ${facilityCondition} ${userCondition}`;
 
     // Get total fault requests
-    const totalResult = await query(`SELECT COUNT(*) as count FROM eams_fault_requests ${baseWhere}`);
+    const totalResult = await query(`SELECT COUNT(*) as count FROM eams_fault_requests fr ${baseWhere}`);
     
     // Get pending fault requests
-    const pendingResult = await query(`SELECT COUNT(*) as count FROM eams_fault_requests ${baseWhere} AND status = 'pending'`);
+    const pendingResult = await query(`SELECT COUNT(*) as count FROM eams_fault_requests fr ${baseWhere} AND fr.status = 'pending'`);
     
     // Get assigned fault requests
-    const assignedResult = await query(`SELECT COUNT(*) as count FROM eams_fault_requests ${baseWhere} AND status = 'assigned'`);
+    const assignedResult = await query(`SELECT COUNT(*) as count FROM eams_fault_requests fr ${baseWhere} AND fr.status = 'assigned'`);
     
     // Get in progress fault requests
-    const inProgressResult = await query(`SELECT COUNT(*) as count FROM eams_fault_requests ${baseWhere} AND status = 'in_progress'`);
+    const inProgressResult = await query(`SELECT COUNT(*) as count FROM eams_fault_requests fr ${baseWhere} AND fr.status = 'in_progress'`);
     
     // Get completed fault requests
-    const completedResult = await query(`SELECT COUNT(*) as count FROM eams_fault_requests ${baseWhere} AND status = 'completed'`);
+    const completedResult = await query(`SELECT COUNT(*) as count FROM eams_fault_requests fr ${baseWhere} AND fr.status = 'completed'`);
     
     // Get critical severity fault requests
-    const criticalResult = await query(`SELECT COUNT(*) as count FROM eams_fault_requests ${baseWhere} AND severity = 'critical' AND status NOT IN ('completed', 'cancelled')`);
+    const criticalResult = await query(`SELECT COUNT(*) as count FROM eams_fault_requests fr ${baseWhere} AND fr.severity = 'critical' AND fr.status NOT IN ('completed', 'cancelled')`);
     
     res.json({
       total: parseInt(totalResult.rows[0].count),

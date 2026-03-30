@@ -38,6 +38,7 @@ services:
       - "3001:3001"
     volumes:
       - ./backend/uploads:/app/uploads
+      - ./database/init:/app/database/init
     networks:
       - sec_network
     depends_on:
