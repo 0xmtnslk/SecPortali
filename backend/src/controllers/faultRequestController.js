@@ -431,7 +431,7 @@ const getFaultRequestStatistics = async (req, res) => {
     const userCondition = (isAdmin || userRoles.includes('Manager') || userRoles.includes('Tesis Yöneticisi') || userRoles.includes('Technician') || userRoles.includes('Teknisyen')) ? '' : `AND requested_by = '${req.user.id}'`;
 
     const baseWhere = `
-      INNER JOIN core_facilities f ON fault_requests.facility_id = f.id 
+      INNER JOIN core_facilities f ON eams_fault_requests.facility_id = f.id 
       WHERE f.is_active = true ${facilityCondition} ${userCondition}`;
 
     // Get total fault requests

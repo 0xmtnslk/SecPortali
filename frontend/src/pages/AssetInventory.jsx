@@ -179,7 +179,7 @@ const AssetInventory = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 dark:divide-gray-800 transition-colors">
-                  {filteredRequests.length === 0 ? (
+                  {filteredAssets.length === 0 ? (
                     <tr>
                       <td colSpan="7" className="px-8 py-32 text-center bg-gray-50/10 dark:bg-gray-800/10">
                         <div className="flex flex-col items-center justify-center space-y-4 opacity-30">
